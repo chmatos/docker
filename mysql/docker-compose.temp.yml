@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  mysql-temp:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: mysql-upgrade-temp
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - shared_mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - shared-network
+networks:
+  shared-network:
+    driver: bridge
+volumes:
+  shared_mysql_data:
+    external: true

@@ -1,0 +1,55 @@
+# docker-services/mysql/docker-compose.yml
+services:
+  mysql:
+    image: mysql:8.0.3
+    platform: linux/amd64
+    container_name: shared-mysql  # Nome fixo para fácil referência
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-db3921ch}
+      # Não precisamos de MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+      # porque vamos criar tudo via scripts SQL
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+      - ./logs:/var/log/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "root", "-pdb3921ch", "-e", "SELECT 1"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - shared-network
+
+  # phpMyAdmin para administração
+  phpmyadmin:
+    image: phpmyadmin:latest
+    platform: linux/amd64
+    container_name: shared-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "${PHPMYADMIN_PORT:-8080}:80"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD:-db3921ch}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - shared-network
+
+volumes:
+  mysql_data:
+    driver: local
+    name: shared_mysql_data
+
+networks:
+  shared-network:
+    name: shared-dev-network
+    driver: bridge
