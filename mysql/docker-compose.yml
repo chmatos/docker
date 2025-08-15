@@ -1,7 +1,7 @@
 # docker-services/mysql/docker-compose.yml
 services:
   mysql:
-    image: mysql:8.0.3
+    image: mysql:latest
     platform: linux/amd64
     container_name: shared-mysql  # Nome fixo para fácil referência
     restart: unless-stopped
@@ -16,7 +16,7 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d
       - ./backups:/backups
       - ./logs:/var/log/mysql
-    command: --default-authentication-plugin=mysql_native_password
+    # MySQL 9.x usa configurações padrão
     healthcheck:
       test: ["CMD", "mysql", "-h", "localhost", "-u", "root", "-pdb3921ch", "-e", "SELECT 1"]
       timeout: 20s
