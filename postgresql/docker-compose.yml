@@ -1,0 +1,58 @@
+# docker-services/postgresql/docker-compose.yml
+services:
+  postgresql:
+    image: postgres:latest
+    platform: linux/amd64
+    container_name: shared-postgresql  # Nome fixo para fácil referência
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pg3921ch}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      # Não precisamos de POSTGRES_DB porque vamos criar databases via scripts
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+      - ./postgresql-init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+      - ./logs:/var/log/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - shared-network
+
+  # pgAdmin para administração
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    platform: linux/amd64
+    container_name: shared-pgadmin
+    restart: unless-stopped
+    ports:
+      - "${PGADMIN_PORT:-8081}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      - shared-network
+
+volumes:
+  postgresql_data:
+    driver: local
+    name: shared_postgresql_data
+  pgadmin_data:
+    driver: local
+    name: shared_pgadmin_data
+
+networks:
+  shared-network:
+    name: shared-dev-network
+    driver: bridge
