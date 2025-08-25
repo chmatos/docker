@@ -1,0 +1,59 @@
+# docker-services/postgres_soutag/docker-compose.yml
+services:
+  postgres:
+    image: postgis/postgis:latest
+    platform: linux/amd64
+    container_name: postgres_soutag
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bruno}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-senha123}
+      POSTGRES_DB: ${POSTGRES_DB:-testdb}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./pg_dumps:/pg_dumps
+      - ./postgres-init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+      - ./logs:/var/log/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bruno}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - soutag-network
+
+  # pgAdmin para administração
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    platform: linux/amd64
+    container_name: pgadmin_soutag
+    restart: unless-stopped
+    ports:
+      - "${PGADMIN_PORT:-8082}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGLADMIN_EMAIL:-admin@soutag.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGLADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - soutag-network
+
+volumes:
+  pg_data:
+    driver: local
+    name: soutag_pg_data
+  pgadmin_data:
+    driver: local
+    name: soutag_pgadmin_data
+
+networks:
+  soutag-network:
+    name: soutag-dev-network
+    driver: bridge
